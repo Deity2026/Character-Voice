@@ -142,6 +142,215 @@ export async function registerRoutes(server: Server, app: Express) {
     });
     res.json(session);
   });
+
+  // ---------------- User settings (Premium TTS BYOK) ----------------
+  // Returns settings WITHOUT the API key (key never leaves the server)
+  app.get("/api/settings", (_req: Request, res: Response) => {
+    const s = storage.getUserSettings();
+    if (!s) {
+      return res.json({ premiumProvider: null, premiumEnabled: false, hasApiKey: false });
+    }
+    res.json({
+      premiumProvider: s.premiumProvider,
+      premiumEnabled: !!s.premiumEnabled,
+      hasApiKey: !!s.premiumApiKey,
+    });
+  });
+
+  app.post("/api/settings", (req: Request, res: Response) => {
+    const { premiumProvider, premiumApiKey, premiumEnabled } = req.body || {};
+    const update: any = {};
+    if (premiumProvider !== undefined) update.premiumProvider = premiumProvider;
+    if (premiumEnabled !== undefined) update.premiumEnabled = !!premiumEnabled;
+    if (typeof premiumApiKey === "string" && premiumApiKey.length > 0) {
+      update.premiumApiKey = premiumApiKey;
+    }
+    storage.upsertUserSettings(update);
+    const s = storage.getUserSettings();
+    res.json({
+      premiumProvider: s?.premiumProvider ?? null,
+      premiumEnabled: !!s?.premiumEnabled,
+      hasApiKey: !!s?.premiumApiKey,
+    });
+  });
+
+  app.post("/api/settings/clear-key", (_req: Request, res: Response) => {
+    storage.upsertUserSettings({ premiumApiKey: null as any, premiumEnabled: false });
+    res.json({ ok: true });
+  });
+
+  // List available premium voices for the configured provider
+  app.get("/api/premium/voices", async (_req: Request, res: Response) => {
+    try {
+      const s = storage.getUserSettings();
+      if (!s || !s.premiumApiKey || !s.premiumProvider) {
+        return res.status(400).json({ error: "Premium provider not configured" });
+      }
+      const voices = await listPremiumVoices(s.premiumProvider, s.premiumApiKey);
+      res.json(voices);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Synthesize text using premium TTS (returns audio bytes)
+  app.post("/api/premium/tts", async (req: Request, res: Response) => {
+    try {
+      const s = storage.getUserSettings();
+      if (!s || !s.premiumApiKey || !s.premiumProvider || !s.premiumEnabled) {
+        return res.status(400).json({ error: "Premium TTS not enabled" });
+      }
+      const { text, voiceId, pitch, rate } = req.body || {};
+      if (!text || !voiceId) {
+        return res.status(400).json({ error: "text and voiceId required" });
+      }
+      const audio = await synthesizePremium(
+        s.premiumProvider,
+        s.premiumApiKey,
+        text,
+        voiceId,
+        { pitch, rate }
+      );
+      res.setHeader("Content-Type", audio.contentType);
+      res.setHeader("Cache-Control", "no-store");
+      res.send(Buffer.from(audio.bytes));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+}
+
+// ---------------- Premium TTS Provider Adapters ----------------
+// BYOK — user supplies their own API key. We never charge for these.
+// Providers: 'elevenlabs', 'openai', 'google'
+
+type PremiumVoice = { id: string; name: string; gender?: string; accent?: string; preview?: string };
+
+async function listPremiumVoices(provider: string, apiKey: string): Promise<PremiumVoice[]> {
+  if (provider === "elevenlabs") {
+    const r = await fetch("https://api.elevenlabs.io/v1/voices", {
+      headers: { "xi-api-key": apiKey },
+    });
+    if (!r.ok) throw new Error(`Provider error: ${r.status}`);
+    const data: any = await r.json();
+    return (data.voices || []).map((v: any) => ({
+      id: v.voice_id,
+      name: v.name,
+      gender: v.labels?.gender,
+      accent: v.labels?.accent,
+      preview: v.preview_url,
+    }));
+  }
+  if (provider === "openai") {
+    // OpenAI TTS has fixed voice list (no API endpoint to list them)
+    return [
+      { id: "alloy", name: "Alloy", gender: "neutral" },
+      { id: "ash", name: "Ash", gender: "male" },
+      { id: "ballad", name: "Ballad", gender: "male" },
+      { id: "coral", name: "Coral", gender: "female" },
+      { id: "echo", name: "Echo", gender: "male" },
+      { id: "fable", name: "Fable", gender: "male", accent: "british" },
+      { id: "nova", name: "Nova", gender: "female" },
+      { id: "onyx", name: "Onyx", gender: "male" },
+      { id: "sage", name: "Sage", gender: "female" },
+      { id: "shimmer", name: "Shimmer", gender: "female" },
+      { id: "verse", name: "Verse", gender: "male" },
+    ];
+  }
+  if (provider === "google") {
+    const r = await fetch(
+      `https://texttospeech.googleapis.com/v1/voices?key=${encodeURIComponent(apiKey)}&languageCode=en`
+    );
+    if (!r.ok) throw new Error(`Provider error: ${r.status}`);
+    const data: any = await r.json();
+    // Keep only standard / studio / wavenet en voices
+    return (data.voices || [])
+      .filter((v: any) => (v.languageCodes || []).some((l: string) => l.startsWith("en")))
+      .map((v: any) => ({
+        id: v.name,
+        name: `${v.name} (${(v.languageCodes || [])[0]})`,
+        gender: (v.ssmlGender || "").toLowerCase(),
+        accent: (v.languageCodes || [])[0]?.includes("GB") ? "british" : "american",
+      }));
+  }
+  throw new Error(`Unsupported provider: ${provider}`);
+}
+
+async function synthesizePremium(
+  provider: string,
+  apiKey: string,
+  text: string,
+  voiceId: string,
+  opts: { pitch?: number; rate?: number }
+): Promise<{ bytes: ArrayBuffer; contentType: string }> {
+  if (provider === "elevenlabs") {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    });
+    if (!r.ok) throw new Error(`Provider error: ${r.status} ${await r.text()}`);
+    return { bytes: await r.arrayBuffer(), contentType: "audio/mpeg" };
+  }
+  if (provider === "openai") {
+    const r = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "tts-1",
+        voice: voiceId,
+        input: text,
+        speed: Math.max(0.25, Math.min(4.0, opts.rate ?? 1.0)),
+      }),
+    });
+    if (!r.ok) throw new Error(`Provider error: ${r.status} ${await r.text()}`);
+    return { bytes: await r.arrayBuffer(), contentType: "audio/mpeg" };
+  }
+  if (provider === "google") {
+    const ssml = `<speak><prosody pitch="${pitchToSt(opts.pitch ?? 1)}st" rate="${(opts.rate ?? 1).toFixed(2)}">${escapeXml(text)}</prosody></speak>`;
+    const r = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { ssml },
+          voice: { name: voiceId, languageCode: voiceId.split("-").slice(0, 2).join("-") },
+          audioConfig: { audioEncoding: "MP3" },
+        }),
+      }
+    );
+    if (!r.ok) throw new Error(`Provider error: ${r.status} ${await r.text()}`);
+    const data: any = await r.json();
+    const bytes = Buffer.from(data.audioContent, "base64");
+    return { bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), contentType: "audio/mpeg" };
+  }
+  throw new Error(`Unsupported provider: ${provider}`);
+}
+
+function pitchToSt(p: number): string {
+  // Map 0.5..2.0 (web speech range) to roughly -8..+8 semitones
+  const semis = (p - 1) * 12;
+  return semis.toFixed(1);
+}
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 // Process a book: parse text, detect characters, build voice profiles

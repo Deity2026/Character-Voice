@@ -2,12 +2,13 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { eq, and } from "drizzle-orm";
 import {
-  books, characters, voiceProfiles, dialogueSegments, playbackSessions,
+  books, characters, voiceProfiles, dialogueSegments, playbackSessions, userSettings,
   type Book, type InsertBook,
   type Character, type InsertCharacter,
   type VoiceProfile, type InsertVoiceProfile,
   type DialogueSegment, type InsertDialogueSegment,
   type PlaybackSession, type InsertPlaybackSession,
+  type UserSettings, type InsertUserSettings,
 } from "@shared/schema";
 
 // On Render's free tier the filesystem is ephemeral and there's no persistent disk.
@@ -66,7 +67,21 @@ sqlite.exec(`
     breathiness REAL DEFAULT 0.3,
     resonance TEXT DEFAULT 'medium',
     age_marker TEXT DEFAULT 'adult',
-    synthesis_params TEXT
+    synthesis_params TEXT,
+    selected_voice_uri TEXT,
+    selected_voice_name TEXT,
+    gender_override TEXT,
+    age_preset TEXT,
+    crispness REAL DEFAULT 0.5,
+    premium_voice_id TEXT,
+    premium_provider TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS user_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    premium_provider TEXT,
+    premium_api_key TEXT,
+    premium_enabled INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS dialogue_segments (
@@ -119,6 +134,10 @@ export interface IStorage {
   // Playback
   getPlaybackSession(bookId: number): PlaybackSession | undefined;
   upsertPlaybackSession(session: InsertPlaybackSession): PlaybackSession;
+
+  // User Settings (single-row store)
+  getUserSettings(): UserSettings | undefined;
+  upsertUserSettings(settings: InsertUserSettings): UserSettings;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -217,6 +236,22 @@ export class DatabaseStorage implements IStorage {
         .returning().get();
     }
     return db.insert(playbackSessions).values(session).returning().get();
+  }
+
+  // User Settings
+  getUserSettings(): UserSettings | undefined {
+    return db.select().from(userSettings).where(eq(userSettings.id, 1)).get();
+  }
+
+  upsertUserSettings(settings: InsertUserSettings): UserSettings {
+    const existing = this.getUserSettings();
+    if (existing) {
+      return db.update(userSettings)
+        .set(settings)
+        .where(eq(userSettings.id, 1))
+        .returning().get();
+    }
+    return db.insert(userSettings).values({ ...settings, id: 1 } as any).returning().get();
   }
 }
 

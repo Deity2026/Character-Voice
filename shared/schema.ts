@@ -34,7 +34,7 @@ export const characters = sqliteTable("characters", {
   colorTag: text("color_tag").default("#6366f1"), // UI color for this character
 });
 
-// Voice profiles (Character Voice DNA)
+// Voice profiles (Character Voice DNA) — also stores per-character user overrides
 export const voiceProfiles = sqliteTable("voice_profiles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   characterId: integer("character_id").notNull(),
@@ -48,6 +48,22 @@ export const voiceProfiles = sqliteTable("voice_profiles", {
   resonance: text("resonance").default("medium"), // thin, medium, full, booming
   ageMarker: text("age_marker").default("adult"), // child, teen, young-adult, adult, elderly
   synthesisParams: text("synthesis_params"), // JSON string with full TTS parameters
+  // User overrides (set via the per-character voice editor on the reader)
+  selectedVoiceUri: text("selected_voice_uri"), // Web Speech voiceURI chosen by the user
+  selectedVoiceName: text("selected_voice_name"), // Friendly name of the chosen voice
+  genderOverride: text("gender_override"), // 'male' | 'female' | 'auto'
+  agePreset: text("age_preset"), // 'younger' | 'adult' | 'older' | 'auto'
+  crispness: real("crispness").default(0.5), // 0 - 1, maps to clarity/rate combo
+  premiumVoiceId: text("premium_voice_id"), // Voice id from Premium TTS provider
+  premiumProvider: text("premium_provider"), // 'elevenlabs' | 'openai' | 'google' | null
+});
+
+// User-level settings (single-row store; id=1)
+export const userSettings = sqliteTable("user_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  premiumProvider: text("premium_provider"), // 'elevenlabs' | 'openai' | 'google' | null
+  premiumApiKey: text("premium_api_key"), // BYOK — user supplies their own
+  premiumEnabled: integer("premium_enabled", { mode: "boolean" }).default(false),
 });
 
 // Dialogue segments extracted from books
@@ -79,6 +95,7 @@ export const insertCharacterSchema = createInsertSchema(characters).omit({ id: t
 export const insertVoiceProfileSchema = createInsertSchema(voiceProfiles).omit({ id: true });
 export const insertDialogueSegmentSchema = createInsertSchema(dialogueSegments).omit({ id: true });
 export const insertPlaybackSessionSchema = createInsertSchema(playbackSessions).omit({ id: true });
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({ id: true });
 
 // Types
 export type Book = typeof books.$inferSelect;
@@ -91,3 +108,5 @@ export type DialogueSegment = typeof dialogueSegments.$inferSelect;
 export type InsertDialogueSegment = z.infer<typeof insertDialogueSegmentSchema>;
 export type PlaybackSession = typeof playbackSessions.$inferSelect;
 export type InsertPlaybackSession = z.infer<typeof insertPlaybackSessionSchema>;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
