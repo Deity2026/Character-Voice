@@ -10,8 +10,15 @@ import {
   type PlaybackSession, type InsertPlaybackSession,
 } from "@shared/schema";
 
-const sqlite = new Database("charactervoice.db");
-sqlite.pragma("journal_mode = WAL");
+// On Render's free tier the filesystem is ephemeral and there's no persistent disk.
+// Use an in-memory SQLite DB in production so the app works reliably across cold starts.
+// In development (local), use a file-backed DB for convenience.
+const dbPath = process.env.DATABASE_PATH
+  || (process.env.NODE_ENV === "production" ? ":memory:" : "charactervoice.db");
+const sqlite = new Database(dbPath);
+if (dbPath !== ":memory:") {
+  sqlite.pragma("journal_mode = WAL");
+}
 
 export const db = drizzle(sqlite);
 

@@ -32,6 +32,7 @@ export default function HomePage() {
             <Headphones className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-lg tracking-tight">CharacterVoice</span>
+          <span className="text-[10px] font-medium tracking-wider uppercase text-primary/70 ml-1 mt-1">Patent Pending</span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -62,7 +63,7 @@ export default function HomePage() {
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
           CharacterVoice uses AI to read your books aloud with voices that match each character.
-          Dumbledore sounds wise and deep. Harry sounds young and earnest.
+          Sherlock Holmes sounds sharp and analytical. Elizabeth Bennet sounds witty and spirited.
           Every character gets a voice that fits who they are.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -115,7 +116,7 @@ export default function HomePage() {
           <FeatureCard
             icon={<Headphones className="w-5 h-5" />}
             title="Listen with Character Voices"
-            description="Press play and hear the book come alive. Each character speaks with their own matched voice. Dumbledore sounds like Dumbledore."
+            description="Press play and hear the book come alive. Each character speaks with their own matched voice. Mr. Darcy sounds like Mr. Darcy."
             step="3"
           />
         </div>
@@ -130,32 +131,32 @@ export default function HomePage() {
           </h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <CharacterPreview
-              name="Dumbledore"
-              traits="Elderly, wise, deep voice, British formal"
+              name="Sherlock Holmes"
+              traits="Sharp, analytical, British, intense"
               color="#8b5cf6"
-              pitch="Low"
-              tone="Calm, measured"
+              pitch="Medium"
+              tone="Crisp, deductive"
             />
             <CharacterPreview
-              name="Harry Potter"
-              traits="Young, earnest, determined, British"
+              name="Elizabeth Bennet"
+              traits="Young, witty, spirited, British"
               color="#6366f1"
-              pitch="Medium"
-              tone="Youthful, brave"
-            />
-            <CharacterPreview
-              name="Hermione"
-              traits="Young, intelligent, clear, precise"
-              color="#ec4899"
               pitch="Higher"
-              tone="Confident, brisk"
+              tone="Lively, articulate"
             />
             <CharacterPreview
-              name="Ron Weasley"
-              traits="Young, warm, casual, humorous"
+              name="Mr. Darcy"
+              traits="Reserved, proud, refined, British"
+              color="#ec4899"
+              pitch="Low"
+              tone="Measured, formal"
+            />
+            <CharacterPreview
+              name="Captain Ahab"
+              traits="Weathered, obsessive, commanding"
               color="#f59e0b"
-              pitch="Medium"
-              tone="Cheerful, casual"
+              pitch="Low"
+              tone="Gravelly, intense"
             />
           </div>
         </div>
@@ -163,7 +164,9 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-6 text-center text-sm text-muted-foreground">
-        CharacterVoice — AI Character-Matched Book Narration
+        <div>CharacterVoice — AI Character-Matched Book Narration</div>
+        <div className="mt-1 text-xs text-muted-foreground/60">Patent Pending — U.S. Provisional Application No. 64/044,893</div>
+        <div className="mt-1 text-xs text-muted-foreground/60">Created by Adolfo.CM</div>
       </footer>
     </div>
   );

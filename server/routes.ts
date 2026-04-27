@@ -63,7 +63,7 @@ export async function registerRoutes(server: Server, app: Express) {
       const book = storage.createBook({
         title: DEMO_BOOK_TITLE,
         author: DEMO_BOOK_AUTHOR,
-        fileName: "demo_harry_potter.txt",
+        fileName: "demo_pride_and_prejudice.txt",
         rawText: DEMO_BOOK_TEXT,
         status: "processing",
         coverColor: "#7c3aed",

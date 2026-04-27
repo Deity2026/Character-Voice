@@ -3,7 +3,9 @@
 
 import type { InsertCharacter, InsertVoiceProfile, InsertDialogueSegment } from "@shared/schema";
 
-// Well-known character database for voice matching
+// Well-known character database for voice matching.
+// All entries below are drawn from PUBLIC DOMAIN works to avoid any
+// copyright or right-of-publicity exposure.
 const WELL_KNOWN_CHARACTERS: Record<string, {
   description: string;
   age: string;
@@ -13,42 +15,6 @@ const WELL_KNOWN_CHARACTERS: Record<string, {
   voiceTone: string;
   voiceProfile: Partial<InsertVoiceProfile>;
 }> = {
-  "harry potter": {
-    description: "Young British wizard with round glasses and a lightning scar",
-    age: "young", gender: "male", accent: "British", personality: "brave, loyal, determined",
-    voiceTone: "youthful, earnest",
-    voiceProfile: { pitch: 1.05, rate: 1.0, voiceType: "youthful", accentStyle: "british", emotionalBaseline: "determined", resonance: "medium", ageMarker: "young-adult" }
-  },
-  "dumbledore": {
-    description: "Elderly wizard headmaster with long silver beard and half-moon spectacles",
-    age: "elderly", gender: "male", accent: "British", personality: "wise, calm, mysterious",
-    voiceTone: "deep, gentle, wise",
-    voiceProfile: { pitch: 0.75, rate: 0.85, voiceType: "deep", accentStyle: "british-formal", emotionalBaseline: "calm", resonance: "full", ageMarker: "elderly" }
-  },
-  "hermione": {
-    description: "Brilliant young witch with bushy brown hair, top of her class",
-    age: "young", gender: "female", accent: "British", personality: "intelligent, assertive, caring",
-    voiceTone: "clear, precise, confident",
-    voiceProfile: { pitch: 1.15, rate: 1.1, voiceType: "clear", accentStyle: "british", emotionalBaseline: "energetic", resonance: "medium", ageMarker: "young-adult" }
-  },
-  "ron": {
-    description: "Tall, gangly red-haired wizard, loyal friend with a big family",
-    age: "young", gender: "male", accent: "British", personality: "humorous, loyal, insecure",
-    voiceTone: "warm, casual, slightly nervous",
-    voiceProfile: { pitch: 0.95, rate: 1.05, voiceType: "warm", accentStyle: "british-casual", emotionalBaseline: "cheerful", resonance: "medium", ageMarker: "young-adult" }
-  },
-  "gandalf": {
-    description: "Ancient wizard in grey robes with a long white beard and staff",
-    age: "elderly", gender: "male", accent: "British", personality: "wise, commanding, humorous",
-    voiceTone: "deep, authoritative, grandfatherly",
-    voiceProfile: { pitch: 0.7, rate: 0.8, voiceType: "deep", accentStyle: "british-formal", emotionalBaseline: "calm", resonance: "booming", ageMarker: "elderly" }
-  },
-  "frodo": {
-    description: "Small hobbit with curly hair, carrying the One Ring",
-    age: "young", gender: "male", accent: "British", personality: "brave, compassionate, burdened",
-    voiceTone: "soft, earnest, gentle",
-    voiceProfile: { pitch: 1.1, rate: 0.95, voiceType: "soft", accentStyle: "british-rural", emotionalBaseline: "calm", resonance: "thin", ageMarker: "young-adult" }
-  },
   "sherlock holmes": {
     description: "Brilliant detective with sharp features and piercing eyes",
     age: "middle-aged", gender: "male", accent: "British", personality: "analytical, eccentric, intense",
@@ -60,6 +26,54 @@ const WELL_KNOWN_CHARACTERS: Record<string, {
     age: "middle-aged", gender: "male", accent: "British", personality: "loyal, practical, warm",
     voiceTone: "warm, steady, conversational",
     voiceProfile: { pitch: 0.95, rate: 0.95, voiceType: "warm", accentStyle: "british", emotionalBaseline: "calm", resonance: "medium", ageMarker: "adult" }
+  },
+  "captain ahab": {
+    description: "Grizzled, obsessive whaling captain with a peg leg and burning intensity",
+    age: "elderly", gender: "male", accent: "American", personality: "obsessive, commanding, vengeful",
+    voiceTone: "gravelly, thunderous, fervent",
+    voiceProfile: { pitch: 0.7, rate: 0.9, voiceType: "deep", accentStyle: "american-old", emotionalBaseline: "hostile", resonance: "booming", ageMarker: "elderly" }
+  },
+  "ishmael": {
+    description: "Thoughtful young sailor and narrator, observant and philosophical",
+    age: "young", gender: "male", accent: "American", personality: "reflective, curious, steady",
+    voiceTone: "calm, thoughtful, measured",
+    voiceProfile: { pitch: 1.0, rate: 0.95, voiceType: "warm", accentStyle: "american-neutral", emotionalBaseline: "calm", resonance: "medium", ageMarker: "young-adult" }
+  },
+  "jane eyre": {
+    description: "Plain but spirited young governess with deep moral conviction",
+    age: "young", gender: "female", accent: "British", personality: "principled, independent, quietly strong",
+    voiceTone: "clear, earnest, composed",
+    voiceProfile: { pitch: 1.1, rate: 1.0, voiceType: "clear", accentStyle: "british", emotionalBaseline: "determined", resonance: "medium", ageMarker: "young-adult" }
+  },
+  "mr. rochester": {
+    description: "Brooding, world-weary master of Thornfield Hall",
+    age: "middle-aged", gender: "male", accent: "British", personality: "sardonic, intense, conflicted",
+    voiceTone: "deep, brooding, edged",
+    voiceProfile: { pitch: 0.8, rate: 0.95, voiceType: "deep", accentStyle: "british-formal", emotionalBaseline: "neutral", resonance: "full", ageMarker: "adult" }
+  },
+  "tom sawyer": {
+    description: "Mischievous American boy with a knack for trouble and adventure",
+    age: "young", gender: "male", accent: "American-Southern", personality: "clever, playful, daring",
+    voiceTone: "bright, cheeky, energetic",
+    voiceProfile: { pitch: 1.2, rate: 1.1, voiceType: "youthful", accentStyle: "american-southern", emotionalBaseline: "cheerful", resonance: "thin", ageMarker: "young" }
+  },
+  "huckleberry finn": {
+    description: "Ragged, free-spirited boy of the Mississippi, plain-spoken and wise beyond his years",
+    age: "young", gender: "male", accent: "American-Southern", personality: "independent, honest, observant",
+    voiceTone: "laconic, plainspoken, warm",
+    voiceProfile: { pitch: 1.1, rate: 0.95, voiceType: "warm", accentStyle: "american-southern", emotionalBaseline: "calm", resonance: "medium", ageMarker: "young" }
+  },
+  "hercule poirot": {
+    description: "Fastidious Belgian detective with a waxed moustache and exacting manner",
+    age: "middle-aged", gender: "male", accent: "Belgian-French", personality: "meticulous, vain, brilliant",
+    voiceTone: "precise, lilting, refined",
+    voiceProfile: { pitch: 0.95, rate: 1.0, voiceType: "sharp", accentStyle: "belgian-french", emotionalBaseline: "neutral", resonance: "medium", ageMarker: "adult" }
+  },
+  "long john silver": {
+    description: "One-legged sea cook turned pirate, charming and cunning in equal measure",
+    age: "middle-aged", gender: "male", accent: "British-West-Country", personality: "charismatic, cunning, dangerous",
+    voiceTone: "booming, jovial, weathered",
+    voiceProfile: { pitch: 0.8, rate: 0.95, voiceType: "deep", accentStyle: "british-west-country", emotionalBaseline: "cheerful", resonance: "booming", ageMarker: "adult" }
   },
   "elizabeth bennet": {
     description: "Witty and intelligent young woman, second of five sisters",
@@ -129,12 +143,21 @@ export function parseTextIntoSegments(text: string, bookId: number): {
       continue;
     }
 
+    // Common adverbs and filler words after dialogue tags — strip from character names
+    const STRIP_WORDS = new Set(["gravely","kindly","firmly","softly","loudly","quietly","angrily","sadly","happily","nervously","excitedly","calmly","coldly","warmly","sharply","gently","eagerly","wearily","briskly","carelessly","uncertainly","sheepishly","disapprovingly","cheerfully","thoughtfully","sarcastically","proudly","haughtily","bitterly","fiercely","grimly","lazily","dreamily","impatiently","desperately","frantically","furiously","abruptly","reluctantly","doubtfully","matter-of-factly","mildly","dryly","joyfully","brightly","in","with","at","to","from","disbelief","disgust","surprise","horror","delight","anger","amusement","excitement","wonder","relief","alarm","nearly","almost","falling","turning","looking","peering","stepping","rising","replied","returned","cried"]);
+
+    // Words that can never be character names by themselves — pronouns, articles, common verbs.
+    // These can appear as the word right after "said" (e.g., "said his wife" / "replied she").
+    const NON_NAMES = new Set(["he","she","it","they","we","i","you","his","her","hers","him","its","their","theirs","them","our","ours","my","mine","your","yours","the","a","an","this","that","these","those","is","was","were","be","been","being","and","but","or","so","as","of","if","then","there","here","now","who","what","when","where","why","how","sir","madam","miss","lord","lady","mr","mrs","ms","dr"]);
+
     // Find dialogue with attribution patterns
-    // Pattern: "dialogue" said/asked/replied/whispered CharacterName
-    const dialoguePattern = /[""\u201C]([^""\u201D]+)[""\u201D]\s*(?:,?\s*(?:said|asked|replied|whispered|shouted|exclaimed|murmured|called|cried|answered|snapped|muttered|growled|sighed|laughed|screamed|yelled|demanded|pleaded|begged|suggested|warned|announced|declared|explained|interrupted|continued|added|agreed|argued|insisted|protested|admitted|confessed|boasted|complained|grumbled|grunted|hissed|roared|bellowed|stammered|stuttered|gasped))\s+(\w+(?:\s+\w+)?)/gi;
+    // Pattern: "dialogue" said/asked/replied/whispered CharacterName adverb?
+    // Speaker pattern allows titles like Mr., Mrs., Dr., Ms., St. plus 1-2 following name parts
+    const SPEAKER_PATTERN = String.raw`(?:Mr\.|Mrs\.|Ms\.|Dr\.|St\.|Mr|Mrs|Ms|Dr|Lord|Lady|Sir|Miss|Captain|Father|Mother|Aunt|Uncle)?\s*\w+(?:\s+\w+){0,2}`;
+    const dialoguePattern = new RegExp(`[""\u201C]([^""\u201D]+)[""\u201D]\\s*(?:,?\\s*(?:said|asked|replied|whispered|shouted|exclaimed|murmured|called|cried|answered|snapped|muttered|growled|sighed|laughed|screamed|yelled|demanded|pleaded|begged|suggested|warned|announced|declared|explained|interrupted|continued|added|agreed|argued|insisted|protested|admitted|confessed|boasted|complained|grumbled|grunted|hissed|roared|bellowed|stammered|stuttered|gasped|returned|observed|remarked))\\s+(${SPEAKER_PATTERN})`, "gi");
 
     // Also pattern: CharacterName said, "dialogue"
-    const dialoguePattern2 = /(\w+(?:\s+\w+)?)\s+(?:said|asked|replied|whispered|shouted|exclaimed|murmured|called)\s*,?\s*[""\u201C]([^""\u201D]+)[""\u201D]/gi;
+    const dialoguePattern2 = new RegExp(`(${SPEAKER_PATTERN})\\s+(?:said|asked|replied|whispered|shouted|exclaimed|murmured|called)\\s*,?\\s*[""\u201C]([^""\u201D]+)[""\u201D]`, "gi");
 
     let hasDialogue = false;
     const surrounding = paragraphs.slice(Math.max(0, i - 1), Math.min(paragraphs.length, i + 2)).join(" ");
@@ -148,7 +171,44 @@ export function parseTextIntoSegments(text: string, bookId: number): {
       hasDialogue = true;
       const dialogue = match[1];
       const speaker = match[2].trim();
-      const normalizedSpeaker = speaker.charAt(0).toUpperCase() + speaker.slice(1).toLowerCase();
+      // Strip trailing adverbs/fillers from speaker name (e.g., "Dumbledore gravely" -> "Dumbledore")
+      const speakerWords = speaker.split(/\s+/);
+      // Only keep first word(s) that look like proper names (capitalized), strip rest
+      const cleanedWords: string[] = [];
+      for (const w of speakerWords) {
+        if (STRIP_WORDS.has(w.toLowerCase())) continue;
+        // If word starts lowercase and isn't the first word, it's probably not a name
+        if (cleanedWords.length > 0 && w[0] === w[0].toLowerCase()) continue;
+        cleanedWords.push(w);
+      }
+      const cleanSpeaker = cleanedWords.length > 0 ? cleanedWords.join(" ") : speakerWords[0];
+      // Title-case each word (preserves "Mr.", "Mrs.", etc., and capitalizes proper names)
+      const normalizedSpeaker = cleanSpeaker.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+
+      // Skip if the resulting "speaker" is just a pronoun or non-name word (e.g., "His", "She")
+      // — leave the segment as unattributed dialogue rather than inventing a fake character.
+      if (NON_NAMES.has(normalizedSpeaker.toLowerCase()) || normalizedSpeaker.length < 2) {
+        // Treat the whole match as just dialogue with no speaker.
+        if (match.index > lastEnd) {
+          const narration = para.substring(lastEnd, match.index).trim();
+          if (narration.length > 0) {
+            segments.push({
+              bookId, characterId: null, chapterIndex, segmentIndex: segmentIndex++,
+              text: narration, isDialogue: false, isNarration: true,
+              emotionalContext: detectEmotion(narration, surrounding),
+              surroundingContext: surrounding.substring(0, 200),
+            });
+          }
+        }
+        segments.push({
+          bookId, characterId: null, chapterIndex, segmentIndex: segmentIndex++,
+          text: dialogue, isDialogue: true, isNarration: false,
+          emotionalContext: detectEmotion(dialogue, surrounding),
+          surroundingContext: surrounding.substring(0, 200),
+        });
+        lastEnd = match.index + match[0].length;
+        continue;
+      }
 
       // Add narration before this dialogue if any
       if (match.index > lastEnd) {
@@ -449,54 +509,61 @@ function generateVoiceProfile(traits: {
   };
 }
 
-// Demo text for showcasing the app
-export const DEMO_BOOK_TEXT = `Chapter 1: The Boy Who Lived
+// Demo text for showcasing the app — drawn from PUBLIC DOMAIN works only.
+// Uses Pride and Prejudice (Jane Austen, 1813) — fully public domain.
+export const DEMO_BOOK_TEXT = `Chapter 1
 
-Mr. and Mrs. Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense.
+It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.
 
-"I heard the Potters' son — Harry — arrived at Hogwarts this year," said Dumbledore gravely.
+However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.
 
-"You don't mean — you can't mean the people who live —" gasped Hermione, staring at the letter.
+"My dear Mr. Bennet," said his lady to him one day, "have you heard that Netherfield Park is let at last?"
 
-"My dear Professor, I've never seen a cat sit so stiffly," said Dumbledore kindly.
+Mr. Bennet replied that he had not.
 
-"I would trust Hagrid with my life," said Dumbledore firmly.
+"But it is," returned she, briskly. "For Mrs. Long has just been here, and she told me all about it."
 
-"Famous before he can walk and talk!" exclaimed Hermione in disbelief. "Famous for something he won't even remember!"
+Mr. Bennet made no answer.
 
-Harry felt his face go red. He stammered nervously.
+"Do not you want to know who has taken it?" cried his wife, impatiently.
 
-"I — I didn't know," whispered Harry. "I didn't know I was famous."
+"You want to tell me, and I have no objection to hearing it."
 
-"Wicked!" shouted Ron in excitement. "You're really Harry Potter?"
+This was invitation enough.
 
-"Everyone thinks I'm special," said Harry gloomily. "All these people in the pub, shaking my hand — but I don't know anything about magic at all."
+"Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England," exclaimed Mrs. Bennet, excitedly. "That he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately."
 
-"Don't worry," said Hermione briskly. "I've read all our course books, and I think you'll do fine. There's so much to learn, isn't there?"
+"What is his name?" asked Mr. Bennet, calmly.
 
-"Now, I must ask you," said Dumbledore, peering over his half-moon spectacles, "did anything peculiar happen on the way here?"
+"Bingley," replied Mrs. Bennet, eagerly.
 
-"A snake talked to me at the zoo," said Harry sheepishly.
+"Is he married or single?"
 
-"A snake!" exclaimed Ron, nearly falling off his seat. "Brilliant!"
+"Oh! single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!" announced Mrs. Bennet, proudly.
 
-Hermione rolled her eyes. "Honestly, Ronald," she said disapprovingly. "A snake talking to a wizard is a sign of a very rare and potentially dangerous ability."
+"How so? how can it affect them?" asked Mr. Bennet, dryly.
 
-Chapter 2: The Journey Begins
+"My dear Mr. Bennet," replied his wife, sharply, "how can you be so tiresome! You must know that I am thinking of his marrying one of them."
 
-The morning sun cast long shadows across the grounds of Hogwarts School of Witchcraft and Wizardry. The ancient castle stood tall against the grey sky, its towers reaching toward the clouds like stone fingers.
+"Is that his design in settling here?" asked Mr. Bennet, sarcastically.
 
-"I still can't believe we're actually here," whispered Ron, gazing up at the enchanted ceiling of the Great Hall.
+"Design! nonsense, how can you talk so!" exclaimed Mrs. Bennet, impatiently. "But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes."
 
-"It's bewitched to look like the sky outside," said Hermione matter-of-factly. "I read about it in Hogwarts: A History."
+Elizabeth Bennet listened to the conversation from the next room and could not help smiling.
 
-Harry smiled at his new friends. For the first time in his life, he felt like he truly belonged somewhere.
+"I do not see the occasion for that," said Elizabeth, calmly, stepping into the parlour. "You and the girls may go, or you may send them by themselves, which perhaps will be still better; for as you are as handsome as any of them, Mr. Bingley might like you the best of the party."
 
-"Welcome, welcome to another year at Hogwarts!" announced Dumbledore, rising from his golden chair. His voice carried effortlessly across the vast hall. "Before we begin our feast, I would like to say a few words. And here they are: Nitwit! Blubber! Oddment! Tweak!"
+"My dear, you flatter me," replied Mrs. Bennet, warmly. "I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now."
 
-"Is he a bit mad?" asked Harry uncertainly, turning to Ron.
+Chapter 2
 
-"Mad?" said Ron carelessly. "He's a genius! Best wizard in the world! But he is a bit mad, yes."`;
+Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last assuring his wife that he should not go.
 
-export const DEMO_BOOK_TITLE = "Harry Potter — Demo Excerpt";
-export const DEMO_BOOK_AUTHOR = "Demo (Character Voice Showcase)";
+"What an excellent father you have, girls!" said Mrs. Bennet, joyfully, when at last she discovered the truth. "I do not know how you will ever make him amends for his kindness."
+
+"I am sure I shall be very glad to see Mr. Bingley," said Elizabeth, brightly.
+
+"Tomorrow we shall have an opportunity of doing so at the assembly," added Mr. Bennet, mildly. "I think we may all spare ourselves the trouble of further discussion until then."`;
+
+export const DEMO_BOOK_TITLE = "Pride and Prejudice — Demo Excerpt";
+export const DEMO_BOOK_AUTHOR = "Jane Austen (Public Domain)";
