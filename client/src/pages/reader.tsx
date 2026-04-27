@@ -52,26 +52,131 @@ export default function ReaderPage() {
   const currentSegment = segments[currentSegmentIndex];
   const currentCharacter = currentSegment ? charMap.get(currentSegment.characterId ?? 0) : null;
 
-  // Get available voices
-  const getVoiceForCharacter = useCallback((char: Character | null | undefined): SpeechSynthesisVoice | null => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) return null;
+  // ---------------------------------------------------------------------------
+  // Voice selection: gender-aware, accent-aware, with per-character distribution
+  // ---------------------------------------------------------------------------
 
-    // Try to match voice characteristics
-    if (char) {
-      const gender = char.gender?.toLowerCase();
-      const isEnglish = (v: SpeechSynthesisVoice) => v.lang.startsWith("en");
-      const englishVoices = voices.filter(isEnglish);
+  // Heuristic gender detector for SpeechSynthesisVoice based on the voice's
+  // displayed name. Web Speech doesn't expose gender directly, so we infer it
+  // from common voice names across browsers/OSes.
+  const FEMALE_NAME_HINTS = [
+    "female","woman","girl",
+    // Common female voice display names across Chrome / Edge / Safari / Android
+    "samantha","victoria","karen","moira","tessa","fiona","susan","allison","ava","kate",
+    "serena","zira","hazel","libby","olivia","emma","jenny","aria","michelle",
+    "sonia","elsa","sandy","vicki","kimberly","salli","joanna","ivy","ruth",
+    "amy","emily","ada","google uk english female","google us english"
+  ];
+  const MALE_NAME_HINTS = [
+    "male","man","boy",
+    "daniel","alex","david","fred","oliver","thomas","tom","mark","james",
+    "ryan","george","guy","matthew","justin","john","michael","william",
+    "arthur","brian","diego","jorge","liam","ethan","noah","google uk english male"
+  ];
 
-      if (englishVoices.length > 0) {
-        // Use character ID to consistently pick the same voice
-        const idx = char.id % englishVoices.length;
-        return englishVoices[idx];
-      }
+  const inferVoiceGender = (v: SpeechSynthesisVoice): "male" | "female" | "unknown" => {
+    const n = v.name.toLowerCase();
+    // Some browsers expose gender directly (Android "...#female_1")
+    if (FEMALE_NAME_HINTS.some(h => n.includes(h))) return "female";
+    if (MALE_NAME_HINTS.some(h => n.includes(h))) return "male";
+    return "unknown";
+  };
+
+  const isBritishLang = (v: SpeechSynthesisVoice) =>
+    v.lang.toLowerCase().startsWith("en-gb") || v.lang.toLowerCase().startsWith("en_gb");
+
+  // Build a voice pool grouped by accent + gender. Memoize across renders.
+  const voicePoolRef = useRef<{
+    britishMale: SpeechSynthesisVoice[];
+    britishFemale: SpeechSynthesisVoice[];
+    americanMale: SpeechSynthesisVoice[];
+    americanFemale: SpeechSynthesisVoice[];
+    anyEnglish: SpeechSynthesisVoice[];
+    narrator: SpeechSynthesisVoice | null;
+  } | null>(null);
+
+  const buildVoicePool = useCallback(() => {
+    const all = window.speechSynthesis.getVoices();
+    const englishVoices = all.filter(v => v.lang.toLowerCase().startsWith("en"));
+
+    const britishMale: SpeechSynthesisVoice[] = [];
+    const britishFemale: SpeechSynthesisVoice[] = [];
+    const americanMale: SpeechSynthesisVoice[] = [];
+    const americanFemale: SpeechSynthesisVoice[] = [];
+
+    for (const v of englishVoices) {
+      const g = inferVoiceGender(v);
+      const british = isBritishLang(v);
+      if (british && g === "male") britishMale.push(v);
+      else if (british && g === "female") britishFemale.push(v);
+      else if (!british && g === "male") americanMale.push(v);
+      else if (!british && g === "female") americanFemale.push(v);
     }
 
-    return voices[0] || null;
+    // Pick a calm, crisp narrator voice — prefer a recognizable mid-range male.
+    // Order of preference: Daniel (Apple en-GB male), Google UK English Male,
+    // Microsoft Ryan / Guy, then any en-GB male, then any en-US male.
+    const findByName = (names: string[]): SpeechSynthesisVoice | null => {
+      for (const n of names) {
+        const v = englishVoices.find(x => x.name.toLowerCase().includes(n.toLowerCase()));
+        if (v) return v;
+      }
+      return null;
+    };
+    const narrator =
+      findByName(["Daniel", "Google UK English Male", "Ryan", "Guy", "Mark", "David"]) ||
+      britishMale[0] || americanMale[0] || englishVoices[0] || null;
+
+    voicePoolRef.current = {
+      britishMale, britishFemale, americanMale, americanFemale,
+      anyEnglish: englishVoices,
+      narrator,
+    };
   }, []);
+
+  // Pick a voice that matches gender + accent, distributing across characters
+  // of the same group so multiple male/female characters don't all sound alike.
+  const getVoiceForCharacter = useCallback((char: Character | null | undefined): SpeechSynthesisVoice | null => {
+    if (!voicePoolRef.current) buildVoicePool();
+    const pool = voicePoolRef.current;
+    if (!pool || pool.anyEnglish.length === 0) return null;
+
+    // Narrator gets its dedicated voice
+    if (char?.name === "Narrator" || !char) {
+      return pool.narrator || pool.anyEnglish[0];
+    }
+
+    const gender = (char.gender || "").toLowerCase();
+    const accent = (char.accent || "").toLowerCase();
+    const wantsBritish = accent.includes("british") || accent.includes("english") || accent.includes("uk");
+
+    // Build candidate list ordered by best match
+    let candidates: SpeechSynthesisVoice[] = [];
+    if (gender === "female") {
+      candidates = wantsBritish
+        ? [...pool.britishFemale, ...pool.americanFemale]
+        : [...pool.americanFemale, ...pool.britishFemale];
+      // Critical: never fall back to a male voice for a female character
+      if (candidates.length === 0) candidates = [...pool.britishFemale, ...pool.americanFemale];
+    } else if (gender === "male") {
+      candidates = wantsBritish
+        ? [...pool.britishMale, ...pool.americanMale]
+        : [...pool.americanMale, ...pool.britishMale];
+      if (candidates.length === 0) candidates = [...pool.britishMale, ...pool.americanMale];
+    } else {
+      // Unknown gender — prefer accent
+      candidates = wantsBritish
+        ? [...pool.britishMale, ...pool.britishFemale, ...pool.americanMale, ...pool.americanFemale]
+        : pool.anyEnglish;
+    }
+
+    // Last-ditch fallback so we always pick something
+    if (candidates.length === 0) candidates = pool.anyEnglish;
+
+    // Distribute across candidates by character id so two female Brits get different voices
+    const idx = Math.abs(char.id) % candidates.length;
+    return candidates[idx] || pool.anyEnglish[0];
+  }, [buildVoicePool]);
 
   // Apply voice profile to utterance
   const applyVoiceProfile = useCallback((utterance: SpeechSynthesisUtterance, char: Character | null | undefined) => {
@@ -79,37 +184,49 @@ export default function ReaderPage() {
     if (voice) utterance.voice = voice;
 
     // Apply character-specific settings
-    if (char?.name === "Narrator") {
-      utterance.pitch = 1.0;
-      utterance.rate = 0.95 * playbackSpeed;
-    } else if (char) {
-      // Map character traits to speech parameters
-      const age = char.age?.toLowerCase();
-      const gender = char.gender?.toLowerCase();
-      const tone = char.voiceTone?.toLowerCase() || "";
+    if (!char || char.name === "Narrator") {
+      // Calm, crisp narrator — slightly lower than neutral, slightly slower than default
+      utterance.pitch = 0.95;
+      utterance.rate = 0.92 * playbackSpeed;
+    } else {
+      const age = (char.age || "").toLowerCase();
+      const gender = (char.gender || "").toLowerCase();
+      const tone = (char.voiceTone || "").toLowerCase();
+      const personality = (char.personality || "").toLowerCase();
 
+      // Start from a gender-anchored baseline so even if the picked voice's
+      // gender hint is weak, the pitch shift reinforces the difference.
       let pitch = 1.0;
       let rate = 1.0;
 
-      // Age-based pitch
-      if (age === "elderly") { pitch = 0.8; rate = 0.85; }
-      else if (age === "young") { pitch = 1.15; rate = 1.05; }
+      if (gender === "female") pitch = 1.18;
+      else if (gender === "male") pitch = 0.82;
 
-      // Gender-based pitch
-      if (gender === "female") pitch *= 1.1;
-      else if (gender === "male") pitch *= 0.9;
+      // Age modifiers
+      if (age === "elderly") { pitch *= 0.92; rate *= 0.88; }
+      else if (age === "young") { pitch *= 1.06; rate *= 1.03; }
+      else if (age === "middle-aged" || age === "adult") { pitch *= 0.98; }
 
-      // Tone adjustments
-      if (tone.includes("deep")) pitch *= 0.85;
-      if (tone.includes("high") || tone.includes("bright")) pitch *= 1.1;
-      if (tone.includes("rapid") || tone.includes("brisk")) rate *= 1.1;
-      if (tone.includes("slow") || tone.includes("measured")) rate *= 0.9;
+      // Tone modifiers
+      if (tone.includes("deep") || tone.includes("gravelly") || tone.includes("resonant")) pitch *= 0.9;
+      if (tone.includes("high") || tone.includes("bright") || tone.includes("lively") || tone.includes("youthful")) pitch *= 1.05;
+      if (tone.includes("rapid") || tone.includes("brisk") || tone.includes("quick")) rate *= 1.1;
+      if (tone.includes("slow") || tone.includes("measured") || tone.includes("calm") || tone.includes("formal")) rate *= 0.92;
+      if (tone.includes("sharp") || tone.includes("crisp")) rate *= 1.05;
+
+      // Personality modifiers (small)
+      if (personality.includes("witty") || personality.includes("playful") || personality.includes("spirited")) pitch *= 1.03;
+      if (personality.includes("reserved") || personality.includes("proud") || personality.includes("stern")) rate *= 0.95;
+      if (personality.includes("intense") || personality.includes("obsessive")) rate *= 1.05;
+
+      // Per-character jitter so two same-gender characters don't sound identical
+      // (deterministic from char.id so it's stable across plays)
+      const jitter = ((char.id * 9301 + 49297) % 233280) / 233280; // 0..1
+      pitch *= 0.95 + jitter * 0.1; // ±5%
+      rate *= 0.97 + jitter * 0.06; // ±3%
 
       utterance.pitch = Math.max(0.1, Math.min(2.0, pitch));
       utterance.rate = Math.max(0.1, Math.min(3.0, rate * playbackSpeed));
-    } else {
-      utterance.pitch = 1.0;
-      utterance.rate = playbackSpeed;
     }
 
     utterance.volume = isMuted ? 0 : volume;
@@ -196,13 +313,20 @@ export default function ReaderPage() {
     };
   }, []);
 
-  // Load voices
+  // Load voices and (re)build the voice pool when they become available.
+  // Web Speech ships voices asynchronously on Chrome/Edge — first call may return [].
   useEffect(() => {
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices();
+    buildVoicePool();
+    const handler = () => buildVoicePool();
+    window.speechSynthesis.onvoiceschanged = handler;
+    // Some browsers don't fire voiceschanged — retry a few times.
+    const t1 = setTimeout(buildVoicePool, 250);
+    const t2 = setTimeout(buildVoicePool, 1000);
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      clearTimeout(t1); clearTimeout(t2);
     };
-  }, []);
+  }, [buildVoicePool]);
 
   // Keyboard shortcuts
   useEffect(() => {

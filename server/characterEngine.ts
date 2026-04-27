@@ -387,6 +387,50 @@ function extractCharacterDescription(name: string, text: string): string | null 
   return null;
 }
 
+// Common English-language first names by gender. Used as a strong signal
+// when honorific titles aren't present (e.g., "Harry" -> male, "Hermione" -> female).
+const MALE_FIRST_NAMES = new Set([
+  "harry","ron","albus","severus","sirius","remus","draco","neville","fred","george",
+  "percy","bill","charlie","arthur","vernon","dudley","hagrid","dobby","tom","viktor",
+  "cedric","oliver","seamus","dean","colin","justin","ernie","michael","david","john",
+  "james","robert","william","richard","edward","henry","charles","george","thomas",
+  "frank","peter","paul","mark","luke","matthew","andrew","daniel","alexander",
+  "frodo","samwise","gandalf","aragorn","legolas","gimli","boromir","sherlock",
+  "john","hercule","ahab","ishmael","darcy","bingley","wickham","collins","jack",
+  "david","jim","bob","steve","mike","chris","tony","sam","ben","adam","alex","max",
+  "liam","noah","ethan","lucas","mason","logan","jacob","jackson","aiden","owen",
+  "caleb","isaac","nathan","ryan","connor","hunter","eli","jonah","theo","oscar","leo"
+]);
+const FEMALE_FIRST_NAMES = new Set([
+  "hermione","ginny","luna","lily","petunia","minerva","molly","fleur","cho","lavender",
+  "parvati","padma","angelina","katie","nymphadora","tonks","pomona","rolanda","poppy",
+  "narcissa","bellatrix","andromeda","rita","dolores","rosmerta","sybill",
+  "elizabeth","jane","mary","lydia","kitty","catherine","caroline","georgiana","emma",
+  "olivia","sophia","ava","isabella","mia","charlotte","amelia","harper","evelyn",
+  "abigail","emily","madison","avery","ella","scarlett","grace","chloe","victoria",
+  "riley","aria","lily","layla","nora","hazel","violet","aurora","savannah","audrey",
+  "brooklyn","bella","claire","skylar","lucy","paisley","everly","anna","caroline",
+  "sarah","rachel","laura","karen","susan","linda","barbara","deborah","michelle",
+  "jennifer","jessica","amanda","melissa","nicole","kimberly","angela","helen",
+  "alice","diana","clara","rose","daisy","ivy","poppy","eve","ruby","pearl","belle",
+  "galadriel","arwen","eowyn","rosie","juliet","ophelia","cordelia","miranda"
+]);
+
+// Detect British/UK style speech patterns and vocabulary
+function detectBritishStyle(nameContext: string): boolean {
+  const britishMarkers = [
+    /\bcolour\b/, /\bbloody\b/, /\bbloke\b/, /\bmate\b/, /\bblimey\b/, /\bbrilliant\b/,
+    /\bcheers\b/, /\bquite\b/, /\brather\b/, /\bjolly\b/, /\bproper\b/,
+    /\bnoughts\b/, /\bfortnight\b/, /\bwhilst\b/, /\bamongst\b/,
+    /\bmum\b/, /\bmummy\b/, /\bdaddy\b/, /\bgran\b/, /\bnan\b/,
+    /\blift\b/, /\bflat\b/, /\blorry\b/, /\bbiscuit\b/, /\bjumper\b/,
+    /\bschool\s+robe/, /\bhogwarts\b/, /\bdiagon\b/, /\blondon\b/, /\bengland\b/,
+    /\bthe\s+ministry\b/, /\bthe\s+queen\b/, /\bbritish\b/, /\benglish\b/,
+    /\bsir\s+\w+/, /\blord\s+\w+/, /\blady\s+\w+/
+  ];
+  return britishMarkers.some(p => p.test(nameContext));
+}
+
 // Infer character traits from text analysis
 function inferCharacterTraits(name: string, text: string): {
   description: string;
@@ -399,17 +443,36 @@ function inferCharacterTraits(name: string, text: string): {
   const lowerText = text.toLowerCase();
   const nameContext = getNameContext(name, lowerText);
 
-  // Gender inference
+  // ----- Gender inference -----
   let gender = "unknown";
-  const heCount = (nameContext.match(/\bhe\b|\bhis\b|\bhim\b/g) || []).length;
-  const sheCount = (nameContext.match(/\bshe\b|\bher\b|\bhers\b/g) || []).length;
-  if (heCount > sheCount + 2) gender = "male";
-  else if (sheCount > heCount + 2) gender = "female";
 
-  // Age inference
+  // 1) Honorific title in the name itself
+  const lowerName = name.toLowerCase();
+  if (/\b(mr\.?|sir|lord|captain|father|uncle|king|prince|duke|baron|brother|sergeant|colonel|major|general|professor|dr\.?|doctor)\b/.test(lowerName)) {
+    gender = "male";
+  } else if (/\b(mrs\.?|ms\.?|miss|madam|madame|lady|aunt|queen|princess|duchess|baroness|sister|mother)\b/.test(lowerName)) {
+    gender = "female";
+  }
+
+  // 2) First-name lookup (covers "Harry", "Hermione", "Elizabeth", etc.)
+  if (gender === "unknown") {
+    const firstWord = lowerName.replace(/\.|,/g, "").split(/\s+/)[0] || "";
+    if (MALE_FIRST_NAMES.has(firstWord)) gender = "male";
+    else if (FEMALE_FIRST_NAMES.has(firstWord)) gender = "female";
+  }
+
+  // 3) Pronoun co-occurrence (existing heuristic) — lower threshold so it bites
+  if (gender === "unknown") {
+    const heCount = (nameContext.match(/\bhe\b|\bhis\b|\bhim\b/g) || []).length;
+    const sheCount = (nameContext.match(/\bshe\b|\bher\b|\bhers\b/g) || []).length;
+    if (heCount > sheCount) gender = "male";
+    else if (sheCount > heCount) gender = "female";
+  }
+
+  // ----- Age inference -----
   let age = "adult";
-  if (/\b(?:old|elderly|aged|ancient|grey-haired|white-haired|grandfather|grandmother)\b/.test(nameContext)) age = "elderly";
-  else if (/\b(?:young|boy|girl|child|kid|teen|teenager|youth)\b/.test(nameContext)) age = "young";
+  if (/\b(?:old|elderly|aged|ancient|grey-haired|gray-haired|white-haired|wrinkled|grandfather|grandmother|grandpa|grandma)\b/.test(nameContext)) age = "elderly";
+  else if (/\b(?:young|boy|girl|child|kid|teen|teenager|youth|first-year|second-year|third-year|fourth-year)\b/.test(nameContext)) age = "young";
 
   // Personality inference
   const personalityTraits: string[] = [];
@@ -428,11 +491,17 @@ function inferCharacterTraits(name: string, text: string): {
   else if (age === "young") voiceTone = gender === "female" ? "bright, energetic, clear" : "youthful, earnest";
   else voiceTone = gender === "female" ? "clear, confident" : "steady, resonant";
 
+  // ----- Accent inference -----
+  let accent = "neutral";
+  if (detectBritishStyle(nameContext) || detectBritishStyle(lowerText.substring(0, 5000))) {
+    accent = "British";
+  }
+
   return {
     description: `Character from the text. ${gender !== "unknown" ? `Appears to be ${gender}.` : ""} ${age !== "adult" ? `Appears ${age}.` : ""}`,
     age,
     gender,
-    accent: "neutral",
+    accent,
     personality,
     voiceTone,
   };
