@@ -84,6 +84,12 @@ export default function LibraryPage() {
           >
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
+          <Link href="/pricing">
+            <Button variant="ghost" size="sm">Pricing</Button>
+          </Link>
+          <Link href="/account">
+            <Button variant="ghost" size="sm">Account</Button>
+          </Link>
           <Link href="/">
             <Button variant="ghost" size="sm">
               <Home className="w-4 h-4 mr-2" />

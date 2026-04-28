@@ -64,6 +64,13 @@ export const userSettings = sqliteTable("user_settings", {
   premiumProvider: text("premium_provider"), // 'elevenlabs' | 'openai' | 'google' | null
   premiumApiKey: text("premium_api_key"), // BYOK — user supplies their own
   premiumEnabled: integer("premium_enabled", { mode: "boolean" }).default(false),
+  // Subscription tier (set by Stripe webhook)
+  tier: text("tier").default("free"), // 'free' | 'plus' | 'pro' | 'lifetime'
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"), // 'active' | 'canceled' | 'past_due' | null
+  subscriptionRenewsAt: text("subscription_renews_at"), // ISO date
+  email: text("email"), // user-provided for billing
 });
 
 // Dialogue segments extracted from books

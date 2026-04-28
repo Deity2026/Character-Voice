@@ -81,7 +81,13 @@ sqlite.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     premium_provider TEXT,
     premium_api_key TEXT,
-    premium_enabled INTEGER DEFAULT 0
+    premium_enabled INTEGER DEFAULT 0,
+    tier TEXT DEFAULT 'free',
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    subscription_status TEXT,
+    subscription_renews_at TEXT,
+    email TEXT
   );
 
   CREATE TABLE IF NOT EXISTS dialogue_segments (

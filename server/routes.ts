@@ -148,12 +148,19 @@ export async function registerRoutes(server: Server, app: Express) {
   app.get("/api/settings", (_req: Request, res: Response) => {
     const s = storage.getUserSettings();
     if (!s) {
-      return res.json({ premiumProvider: null, premiumEnabled: false, hasApiKey: false });
+      return res.json({
+        premiumProvider: null, premiumEnabled: false, hasApiKey: false,
+        tier: "free", subscriptionStatus: null, subscriptionRenewsAt: null, email: null,
+      });
     }
     res.json({
       premiumProvider: s.premiumProvider,
       premiumEnabled: !!s.premiumEnabled,
       hasApiKey: !!s.premiumApiKey,
+      tier: s.tier || "free",
+      subscriptionStatus: s.subscriptionStatus,
+      subscriptionRenewsAt: s.subscriptionRenewsAt,
+      email: s.email,
     });
   });
 
@@ -179,12 +186,148 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json({ ok: true });
   });
 
+  // ---------------- Stripe Checkout / Billing ----------------
+  // Define plan price IDs via env vars (set in Render dashboard)
+  // STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+  // STRIPE_PRICE_PLUS_MONTHLY, STRIPE_PRICE_PRO_MONTHLY, STRIPE_PRICE_PRO_YEARLY, STRIPE_PRICE_LIFETIME
+  app.get("/api/billing/plans", (_req: Request, res: Response) => {
+    res.json({
+      stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+      plans: {
+        plus_monthly: { priceId: process.env.STRIPE_PRICE_PLUS_MONTHLY || null, amount: 499, interval: "month", tier: "plus" },
+        pro_monthly: { priceId: process.env.STRIPE_PRICE_PRO_MONTHLY || null, amount: 999, interval: "month", tier: "pro" },
+        pro_yearly: { priceId: process.env.STRIPE_PRICE_PRO_YEARLY || null, amount: 7900, interval: "year", tier: "pro" },
+        lifetime: { priceId: process.env.STRIPE_PRICE_LIFETIME || null, amount: 14900, interval: "once", tier: "lifetime" },
+      },
+    });
+  });
+
+  app.post("/api/billing/checkout", async (req: Request, res: Response) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(503).json({ error: "Billing not configured" });
+      }
+      const { plan, email } = req.body || {};
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" as any });
+
+      const priceMap: Record<string, string | undefined> = {
+        plus_monthly: process.env.STRIPE_PRICE_PLUS_MONTHLY,
+        pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+        pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+        lifetime: process.env.STRIPE_PRICE_LIFETIME,
+      };
+      const priceId = priceMap[plan];
+      if (!priceId) return res.status(400).json({ error: "Unknown plan" });
+
+      const isLifetime = plan === "lifetime";
+      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const session = await stripe.checkout.sessions.create({
+        mode: isLifetime ? "payment" : "subscription",
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        customer_email: email || undefined,
+        success_url: `${origin}/#/account?success=1`,
+        cancel_url: `${origin}/#/pricing?canceled=1`,
+        metadata: { plan },
+        allow_promotion_codes: true,
+      });
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("Stripe checkout error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/billing/portal", async (req: Request, res: Response) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(503).json({ error: "Billing not configured" });
+      }
+      const s = storage.getUserSettings();
+      if (!s?.stripeCustomerId) return res.status(400).json({ error: "No active subscription" });
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" as any });
+      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const portal = await stripe.billingPortal.sessions.create({
+        customer: s.stripeCustomerId,
+        return_url: `${origin}/#/account`,
+      });
+      res.json({ url: portal.url });
+    } catch (err: any) {
+      console.error("Stripe portal error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Stripe webhook — must use raw body. Handled in server/index.ts middleware.
+  app.post("/api/billing/webhook", async (req: Request, res: Response) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(503).end();
+      }
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" as any });
+      const sig = req.headers["stripe-signature"] as string;
+      const event = stripe.webhooks.constructEvent(
+        (req as any).rawBody || req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+
+      const planToTier: Record<string, string> = {
+        plus_monthly: "plus", pro_monthly: "pro", pro_yearly: "pro", lifetime: "lifetime",
+      };
+
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as any;
+          const plan = session.metadata?.plan;
+          const tier = planToTier[plan] || "plus";
+          storage.upsertUserSettings({
+            tier,
+            stripeCustomerId: session.customer || null,
+            stripeSubscriptionId: session.subscription || null,
+            subscriptionStatus: "active",
+            email: session.customer_email || null,
+          } as any);
+          break;
+        }
+        case "customer.subscription.updated":
+        case "customer.subscription.created": {
+          const sub = event.data.object as any;
+          storage.upsertUserSettings({
+            stripeSubscriptionId: sub.id,
+            stripeCustomerId: sub.customer,
+            subscriptionStatus: sub.status,
+            subscriptionRenewsAt: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+          } as any);
+          break;
+        }
+        case "customer.subscription.deleted": {
+          storage.upsertUserSettings({ tier: "free", subscriptionStatus: "canceled" } as any);
+          break;
+        }
+      }
+      res.json({ received: true });
+    } catch (err: any) {
+      console.error("Webhook error:", err);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+  });
+
   // List available premium voices for the configured provider
   app.get("/api/premium/voices", async (_req: Request, res: Response) => {
     try {
       const s = storage.getUserSettings();
       if (!s || !s.premiumApiKey || !s.premiumProvider) {
         return res.status(400).json({ error: "Premium provider not configured" });
+      }
+      // Tier gate: BYOK requires Plus+
+      const tier = s.tier || "free";
+      if (tier === "free") {
+        return res.status(402).json({ error: "Plus or Pro subscription required", upgrade: true });
       }
       const voices = await listPremiumVoices(s.premiumProvider, s.premiumApiKey);
       res.json(voices);
@@ -199,6 +342,11 @@ export async function registerRoutes(server: Server, app: Express) {
       const s = storage.getUserSettings();
       if (!s || !s.premiumApiKey || !s.premiumProvider || !s.premiumEnabled) {
         return res.status(400).json({ error: "Premium TTS not enabled" });
+      }
+      // Tier gate: premium TTS requires Plus+
+      const tier = s.tier || "free";
+      if (tier === "free") {
+        return res.status(402).json({ error: "Plus or Pro subscription required", upgrade: true });
       }
       const { text, voiceId, pitch, rate } = req.body || {};
       if (!text || !voiceId) {

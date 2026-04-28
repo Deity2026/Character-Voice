@@ -42,6 +42,9 @@ export default function HomePage() {
           >
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
+          <Link href="/pricing">
+            <Button variant="ghost" size="sm">Pricing</Button>
+          </Link>
           <Link href="/library">
             <Button variant="outline" size="sm" data-testid="link-library">
               <BookOpen className="w-4 h-4 mr-2" />

@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import HomePage from "@/pages/home";
 import LibraryPage from "@/pages/library";
 import ReaderPage from "@/pages/reader";
+import PricingPage from "@/pages/pricing";
+import AccountPage from "@/pages/account";
 import NotFound from "@/pages/not-found";
 
 function AppRouter() {
@@ -16,6 +18,8 @@ function AppRouter() {
         <Route path="/" component={HomePage} />
         <Route path="/library" component={LibraryPage} />
         <Route path="/reader/:id" component={ReaderPage} />
+        <Route path="/pricing" component={PricingPage} />
+        <Route path="/account" component={AccountPage} />
         <Route component={NotFound} />
       </Switch>
     </Router>
