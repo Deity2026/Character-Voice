@@ -1,6 +1,10 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getApiBase } from "./platform";
 
-const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+// API_BASE switches at runtime:
+//   - Web: "" (relative) or rewritten __PORT_5000__ for deploy_website previews
+//   - Mobile (Capacitor): https://character-voice.onrender.com
+const API_BASE = getApiBase();
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {

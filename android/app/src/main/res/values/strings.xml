@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CharacterVoice</string>
+    <string name="title_activity_main">CharacterVoice</string>
+    <string name="package_name">com.deity2026.charactervoice</string>
+    <string name="custom_url_scheme">com.deity2026.charactervoice</string>
+</resources>

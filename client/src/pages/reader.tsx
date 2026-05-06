@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { shouldHideByokUi } from "@/lib/platform";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -1119,6 +1120,12 @@ function SettingsDialog({ settings, onClose, onSaved }: SettingsDialogProps) {
   const [enabled, setEnabled] = useState<boolean>(!!settings?.premiumEnabled);
   const [saving, setSaving] = useState(false);
 
+  // App Store policy: iOS apps may not steer users to external payment
+  // mechanisms for in-app digital goods. We hide the BYOK key entry on
+  // iOS and direct the user to configure it on the web. Web and Android
+  // builds keep full functionality.
+  const hideByok = shouldHideByokUi();
+
   const save = async () => {
     setSaving(true);
     try {
@@ -1161,13 +1168,30 @@ function SettingsDialog({ settings, onClose, onSaved }: SettingsDialogProps) {
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="text-[11px] text-muted-foreground bg-muted/50 border border-border/50 rounded-md p-3 leading-relaxed">
-            CharacterVoice supports multiple premium voice providers via a Bring-Your-Own-Key model.
-            Your key is sent only to the provider you select. CharacterVoice is not affiliated with,
-            endorsed by, or reselling any third-party voice service. You are responsible for usage
-            costs charged by your provider.
-          </div>
+          {hideByok ? (
+            <div className="text-[11px] text-muted-foreground bg-muted/50 border border-border/50 rounded-md p-3 leading-relaxed">
+              Premium voice provider keys are managed on the web at
+              <a
+                href="https://character-voice.onrender.com/account"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline ml-1"
+              >
+                character-voice.onrender.com/account
+              </a>
+              . Sign in there with the same account and your saved key will work in this app.
+            </div>
+          ) : (
+            <div className="text-[11px] text-muted-foreground bg-muted/50 border border-border/50 rounded-md p-3 leading-relaxed">
+              CharacterVoice supports multiple premium voice providers via a Bring-Your-Own-Key model.
+              Your key is sent only to the provider you select. CharacterVoice is not affiliated with,
+              endorsed by, or reselling any third-party voice service. You are responsible for usage
+              costs charged by your provider.
+            </div>
+          )}
 
+          {!hideByok && (
+          <>
           <div className="space-y-1.5">
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Provider</label>
             <Select value={provider} onValueChange={setProvider}>
@@ -1212,6 +1236,8 @@ function SettingsDialog({ settings, onClose, onSaved }: SettingsDialogProps) {
             />
             <span className="text-sm">Enable premium voices for this app</span>
           </label>
+          </>
+          )}
         </div>
 
         <div className="p-5 border-t border-border flex items-center justify-between gap-2">

@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import type { Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import {
   parseTextIntoSegments,
@@ -8,6 +9,15 @@ import {
   DEMO_BOOK_TITLE,
   DEMO_BOOK_AUTHOR,
 } from "./characterEngine";
+import { extractTextFromFile } from "./fileExtract";
+
+// In-memory upload buffer; max 25MB per file. We extract text right
+// after upload and discard the binary so we are not storing copyrighted
+// source files on the server.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 export async function registerRoutes(server: Server, app: Express) {
   // Get all books
@@ -50,6 +60,58 @@ export async function registerRoutes(server: Server, app: Express) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Upload a book from a file (PDF / EPUB / DOCX / TXT). The file is
+  // parsed server-side, the extracted text becomes the book's raw text,
+  // and the file itself is discarded immediately.
+  app.post(
+    "/api/books/upload",
+    upload.single("file"),
+    async (req: Request, res: Response) => {
+      try {
+        const file = (req as any).file as
+          | { buffer: Buffer; originalname: string; mimetype: string }
+          | undefined;
+        if (!file) {
+          return res.status(400).json({ error: "No file provided." });
+        }
+        const titleOverride = (req.body?.title as string | undefined)?.trim();
+        const authorOverride = (req.body?.author as string | undefined)?.trim();
+
+        const extracted = await extractTextFromFile(
+          file.buffer,
+          file.originalname,
+          file.mimetype,
+        );
+        if (!extracted.text || extracted.text.length < 200) {
+          return res.status(422).json({
+            error:
+              "Could not extract enough text from the file. The PDF may be a scanned image (no OCR yet) or the file may be empty.",
+          });
+        }
+
+        const fallbackTitle = file.originalname.replace(/\.[^.]+$/, "").trim();
+        const title = titleOverride || extracted.inferredTitle || fallbackTitle;
+        const author =
+          authorOverride || extracted.inferredAuthor || "Unknown";
+
+        const book = storage.createBook({
+          title,
+          author,
+          fileName: file.originalname,
+          rawText: extracted.text,
+          status: "processing",
+          coverColor: getRandomColor(),
+        });
+        processBook(book.id, extracted.text);
+        res.json(storage.getBook(book.id));
+      } catch (err: any) {
+        const msg = err?.message || "Upload failed";
+        const code = /unsupported|kindle|extract enough/i.test(msg) ? 400 : 500;
+        res.status(code).json({ error: msg });
+      }
+    },
+  );
 
   // Load demo book
   app.post("/api/books/demo", (_req: Request, res: Response) => {

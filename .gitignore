@@ -14,3 +14,19 @@ data.db-journal
 
 *.log
 .DS_Store
+
+# Capacitor — native build artifacts (source projects ARE committed)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/captures/
+android/app/src/main/assets/public/
+ios/App/build/
+ios/App/Pods/
+ios/App/App/public/
+ios/DerivedData/
+ios/.idea/
+*.xcuserstate
+xcuserdata/

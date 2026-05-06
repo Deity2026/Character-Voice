@@ -14,8 +14,36 @@ declare module "http" {
   }
 }
 
+// CORS — required for the Capacitor mobile app to call this backend.
+// On iOS the webview origin is `capacitor://localhost`; on Android it's
+// `https://localhost`. We also allow the Render host and same-origin web.
+const CORS_ALLOWED = new Set([
+  "capacitor://localhost",
+  "https://localhost",
+  "http://localhost",
+  "https://character-voice.onrender.com",
+]);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (CORS_ALLOWED.has(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-cv-platform",
+    );
+  }
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
+
 app.use(
   express.json({
+    limit: "30mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
