@@ -212,14 +212,14 @@ export async function registerRoutes(server: Server, app: Express) {
     if (!s) {
       return res.json({
         premiumProvider: null, premiumEnabled: false, hasApiKey: false,
-        tier: "free", subscriptionStatus: null, subscriptionRenewsAt: null, email: null,
+        tier: "none", subscriptionStatus: null, subscriptionRenewsAt: null, email: null,
       });
     }
     res.json({
       premiumProvider: s.premiumProvider,
       premiumEnabled: !!s.premiumEnabled,
       hasApiKey: !!s.premiumApiKey,
-      tier: s.tier || "free",
+      tier: s.tier || "none",
       subscriptionStatus: s.subscriptionStatus,
       subscriptionRenewsAt: s.subscriptionRenewsAt,
       email: s.email,
@@ -284,6 +284,8 @@ export async function registerRoutes(server: Server, app: Express) {
       if (!priceId) return res.status(400).json({ error: "Unknown plan" });
 
       const isLifetime = plan === "lifetime";
+      // 3-day free trial on Plus monthly only
+      const trialDays = plan === "plus_monthly" ? 3 : 0;
       const origin = req.headers.origin || `https://${req.headers.host}`;
       const session = await stripe.checkout.sessions.create({
         mode: isLifetime ? "payment" : "subscription",
@@ -294,6 +296,14 @@ export async function registerRoutes(server: Server, app: Express) {
         cancel_url: `${origin}/#/pricing?canceled=1`,
         metadata: { plan },
         allow_promotion_codes: true,
+        ...(trialDays > 0 ? {
+          subscription_data: {
+            trial_period_days: trialDays,
+            trial_settings: {
+              end_behavior: { missing_payment_method: "cancel" },
+            },
+          },
+        } : {}),
       });
       res.json({ url: session.url });
     } catch (err: any) {
@@ -368,7 +378,7 @@ export async function registerRoutes(server: Server, app: Express) {
           break;
         }
         case "customer.subscription.deleted": {
-          storage.upsertUserSettings({ tier: "free", subscriptionStatus: "canceled" } as any);
+          storage.upsertUserSettings({ tier: "none", subscriptionStatus: "canceled" } as any);
           break;
         }
       }
@@ -386,9 +396,9 @@ export async function registerRoutes(server: Server, app: Express) {
       if (!s || !s.premiumApiKey || !s.premiumProvider) {
         return res.status(400).json({ error: "Premium provider not configured" });
       }
-      // Tier gate: BYOK requires Plus+
-      const tier = s.tier || "free";
-      if (tier === "free") {
+      // Tier gate: BYOK requires Plus+ (trial counts)
+      const tier = s.tier || "none";
+      if (tier === "none") {
         return res.status(402).json({ error: "Plus or Pro subscription required", upgrade: true });
       }
       const voices = await listPremiumVoices(s.premiumProvider, s.premiumApiKey);
@@ -405,9 +415,9 @@ export async function registerRoutes(server: Server, app: Express) {
       if (!s || !s.premiumApiKey || !s.premiumProvider || !s.premiumEnabled) {
         return res.status(400).json({ error: "Premium TTS not enabled" });
       }
-      // Tier gate: premium TTS requires Plus+
-      const tier = s.tier || "free";
-      if (tier === "free") {
+      // Tier gate: premium TTS requires Plus+ (trial counts)
+      const tier = s.tier || "none";
+      if (tier === "none") {
         return res.status(402).json({ error: "Plus or Pro subscription required", upgrade: true });
       }
       const { text, voiceId, pitch, rate } = req.body || {};

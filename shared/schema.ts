@@ -65,7 +65,8 @@ export const userSettings = sqliteTable("user_settings", {
   premiumApiKey: text("premium_api_key"), // BYOK — user supplies their own
   premiumEnabled: integer("premium_enabled", { mode: "boolean" }).default(false),
   // Subscription tier (set by Stripe webhook)
-  tier: text("tier").default("free"), // 'free' | 'plus' | 'pro' | 'lifetime'
+  // 'none' = no plan (must subscribe to use). 'plus' covers both trialing and paying Plus users.
+  tier: text("tier").default("none"), // 'none' | 'plus' | 'pro' | 'lifetime'
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status"), // 'active' | 'canceled' | 'past_due' | null

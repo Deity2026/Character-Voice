@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Sun, Moon, Sparkles, Crown, Zap, Gift } from "lucide-react";
+import { ArrowLeft, Check, Sun, Moon, Sparkles, Crown, Zap } from "lucide-react";
 import { useState } from "react";
 
 interface BillingPlans {
@@ -33,7 +33,7 @@ export default function PricingPage() {
     queryFn: () => apiRequest("GET", "/api/settings").then(r => r.json()),
   });
 
-  const currentTier = settings?.tier || "free";
+  const currentTier = settings?.tier || "none";
 
   const handleCheckout = async (plan: string) => {
     if (!plans?.stripeConfigured) {
@@ -94,50 +94,41 @@ export default function PricingPage() {
         </h1>
         <p className="text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
           CharacterVoice automatically detects every speaker in your book and gives them their own
-          unique voice. Free forever for browser voices. Upgrade to unlock studio-quality narration.
+          unique voice. Start with a 3-day free trial. Cancel anytime.
         </p>
+      </section>
+
+      {/* Trial banner */}
+      <section className="max-w-4xl mx-auto px-6 mb-6">
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3 justify-center text-center">
+          <Sparkles className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-sm">
+            <span className="font-semibold">3-day free trial on Plus.</span>{" "}
+            <span className="text-muted-foreground">Card required. Cancel anytime in your account before day 3 and pay nothing.</span>
+          </p>
+        </div>
       </section>
 
       {/* Pricing grid */}
       <section className="max-w-6xl mx-auto px-6 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Free */}
-          <PlanCard
-            name="Free"
-            price="$0"
-            period="forever"
-            icon={<Gift className="w-5 h-5" />}
-            description="Everything you need to start enjoying books with character voices."
-            features={[
-              "Unlimited books",
-              "Auto character detection",
-              "Per-character voice editor",
-              "All browser voices",
-              "Pitch / speed / age controls",
-              "Reading progress saved",
-            ]}
-            cta={currentTier === "free" ? "Current plan" : "Switch to Free"}
-            ctaDisabled={currentTier === "free"}
-            onClick={() => {}}
-            highlight={false}
-          />
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
           {/* Plus */}
           <PlanCard
             name="Plus"
             price="$4.99"
             period="per month"
             icon={<Sparkles className="w-5 h-5" />}
-            description="Connect your own studio voices for hyper-realistic narration."
+            description="Start here. 3-day free trial, then $4.99/mo."
             features={[
-              "Everything in Free",
-              "Bring-your-own premium voices",
-              "ElevenLabs / OpenAI / Google",
-              "Unlimited premium playback",
-              "Export character voices to MP3",
-              "Priority email support",
+              "3-day free trial",
+              "Auto character detection",
+              "Per-character voice editor",
+              "All browser voices included",
+              "Bring-your-own premium voices (ElevenLabs / OpenAI / Google)",
+              "Reading progress saved",
+              "Cancel anytime",
             ]}
-            cta={currentTier === "plus" ? "Current plan" : "Upgrade to Plus"}
+            cta={currentTier === "plus" ? "Current plan" : "Start 3-day free trial"}
             ctaDisabled={currentTier === "plus"}
             onClick={() => handleCheckout("plus_monthly")}
             loading={loading === "plus_monthly"}
@@ -149,7 +140,7 @@ export default function PricingPage() {
             name="Pro"
             price="$9.99"
             period="per month"
-            yearlyPrice="$79/yr · save 34%"
+            yearlyPrice="$79.99/yr · save 33%"
             icon={<Crown className="w-5 h-5" />}
             description="Premium voices included. No API keys. Just open and listen."
             features={[
@@ -164,7 +155,7 @@ export default function PricingPage() {
             ctaDisabled={currentTier === "pro"}
             onClick={() => handleCheckout("pro_monthly")}
             loading={loading === "pro_monthly"}
-            secondaryCta="Or yearly · $79"
+            secondaryCta="Or yearly · $79.99"
             secondaryOnClick={() => handleCheckout("pro_yearly")}
             secondaryLoading={loading === "pro_yearly"}
             highlight={true}
@@ -173,7 +164,7 @@ export default function PricingPage() {
           {/* Lifetime */}
           <PlanCard
             name="Lifetime"
-            price="$149"
+            price="$149.99"
             period="one-time"
             icon={<Zap className="w-5 h-5" />}
             description="Pay once, own it forever. Best deal for early adopters."
@@ -198,8 +189,8 @@ export default function PricingPage() {
         <div className="max-w-3xl mx-auto mt-20 space-y-6">
           <h2 className="text-2xl font-bold text-center mb-8">Frequently asked</h2>
           <Faq
-            q="Is the free tier really free?"
-            a="Yes. Forever. The free tier uses voices already built into your browser, so it costs us nothing to operate. You get unlimited books, full character detection, and the complete voice editor."
+            q="How does the 3-day free trial work?"
+            a="You enter your card at checkout. You get full Plus access for 3 days. If you cancel anytime in your account before day 3 ends, you are not charged. Otherwise we automatically charge $4.99/month starting on day 4."
           />
           <Faq
             q="What's the difference between Plus and Pro?"

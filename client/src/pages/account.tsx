@@ -37,15 +37,16 @@ export default function AccountPage() {
     }
   }, [toast]);
 
-  const tier = settings?.tier || "free";
+  const tier = settings?.tier || "none";
 
   const tierConfig: Record<string, { name: string; icon: React.ReactNode; color: string; description: string }> = {
-    free: { name: "Free", icon: <Gift className="w-5 h-5" />, color: "text-muted-foreground", description: "Browser voices, full character editor" },
+    none: { name: "No active plan", icon: <Gift className="w-5 h-5" />, color: "text-muted-foreground", description: "Start a 3-day free trial to unlock CharacterVoice" },
+    trialing: { name: "Plus · Free trial", icon: <Sparkles className="w-5 h-5" />, color: "text-primary", description: "3-day trial active. Auto-renews to $4.99/mo." },
     plus: { name: "Plus", icon: <Sparkles className="w-5 h-5" />, color: "text-primary", description: "Bring-your-own premium voices" },
     pro: { name: "Pro", icon: <Crown className="w-5 h-5" />, color: "text-primary", description: "Premium voices included" },
     lifetime: { name: "Lifetime · Founding Member", icon: <Zap className="w-5 h-5" />, color: "text-primary", description: "All Pro features forever" },
   };
-  const current = tierConfig[tier];
+  const current = tierConfig[tier] || tierConfig.none;
 
   const openPortal = async () => {
     setPortalLoading(true);
@@ -117,7 +118,7 @@ export default function AccountPage() {
             </div>
           )}
 
-          {settings?.subscriptionRenewsAt && tier !== "lifetime" && tier !== "free" && (
+          {settings?.subscriptionRenewsAt && tier !== "lifetime" && tier !== "none" && (
             <div className="mt-2 flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
                 {settings.subscriptionStatus === "canceled" ? "Access ends" : "Next renewal"}
@@ -129,8 +130,8 @@ export default function AccountPage() {
           )}
 
           <div className="mt-6 flex flex-wrap gap-3">
-            {tier === "free" ? (
-              <Button onClick={() => setLocation("/pricing")}>Upgrade plan</Button>
+            {tier === "none" ? (
+              <Button onClick={() => setLocation("/pricing")}>Start free trial</Button>
             ) : tier === "lifetime" ? (
               <Button variant="outline" disabled>You own this forever ❤</Button>
             ) : (

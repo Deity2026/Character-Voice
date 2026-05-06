@@ -82,7 +82,7 @@ sqlite.exec(`
     premium_provider TEXT,
     premium_api_key TEXT,
     premium_enabled INTEGER DEFAULT 0,
-    tier TEXT DEFAULT 'free',
+    tier TEXT DEFAULT 'none',
     stripe_customer_id TEXT,
     stripe_subscription_id TEXT,
     subscription_status TEXT,
