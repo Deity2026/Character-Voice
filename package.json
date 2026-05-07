@@ -62,7 +62,6 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
-    "better-sqlite3": "^11.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -121,7 +120,8 @@
     "@types/ws": "^8.5.13"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8"
+    "bufferutil": "^4.0.8",
+    "better-sqlite3": "^11.7.0"
   },
   "overrides": {
     "drizzle-kit": {
