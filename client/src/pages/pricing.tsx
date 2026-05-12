@@ -7,6 +7,8 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, Sun, Moon, Sparkles, Crown, Zap } from "lucide-react";
 import { useState } from "react";
+import { Browser } from "@capacitor/browser";
+import { isNative, billingReturnUrl } from "@/lib/platform";
 
 interface BillingPlans {
   stripeConfigured: boolean;
@@ -48,12 +50,19 @@ export default function PricingPage() {
       const r = await apiRequest("POST", "/api/billing/checkout", {
         plan,
         email: settings?.email || undefined,
+        // Tell the server to redirect Stripe back into the app via deep link
+        returnTo: isNative() ? billingReturnUrl() : undefined,
       });
       const data = await r.json();
-      if (data.url) {
-        window.location.href = data.url;
+      if (!data.url) throw new Error(data.error || "Could not start checkout");
+
+      if (isNative()) {
+        // Open Stripe in an in-app browser tab. When Stripe redirects to
+        // charactervoice://billing/success the OS reopens the app and
+        // App.tsx's URL listener handles routing.
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
       } else {
-        throw new Error(data.error || "Could not start checkout");
+        window.location.href = data.url;
       }
     } catch (e: any) {
       toast({ title: "Checkout failed", description: e.message, variant: "destructive" });

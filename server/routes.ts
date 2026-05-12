@@ -270,7 +270,7 @@ export async function registerRoutes(server: Server, app: Express) {
       if (!process.env.STRIPE_SECRET_KEY) {
         return res.status(503).json({ error: "Billing not configured" });
       }
-      const { plan, email } = req.body || {};
+      const { plan, email, returnTo } = req.body || {};
       const Stripe = (await import("stripe")).default;
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" as any });
 
@@ -287,13 +287,22 @@ export async function registerRoutes(server: Server, app: Express) {
       // 3-day free trial on Plus monthly only
       const trialDays = plan === "plus_monthly" ? 3 : 0;
       const origin = req.headers.origin || `https://${req.headers.host}`;
+      // returnTo is sent by the mobile app as 'charactervoice://billing' so
+      // Stripe redirects back into the app via deep link. Web clients omit it.
+      const isMobileReturn = typeof returnTo === "string" && /^[a-z][a-z0-9+.-]*:\/\//i.test(returnTo);
+      const successUrl = isMobileReturn
+        ? `${returnTo}/success?session_id={CHECKOUT_SESSION_ID}`
+        : `${origin}/#/account?success=1`;
+      const cancelUrl = isMobileReturn
+        ? `${returnTo}/cancel`
+        : `${origin}/#/pricing?canceled=1`;
       const session = await stripe.checkout.sessions.create({
         mode: isLifetime ? "payment" : "subscription",
         payment_method_types: ["card"],
         line_items: [{ price: priceId, quantity: 1 }],
         customer_email: email || undefined,
-        success_url: `${origin}/#/account?success=1`,
-        cancel_url: `${origin}/#/pricing?canceled=1`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: { plan },
         allow_promotion_codes: true,
         ...(trialDays > 0 ? {

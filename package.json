@@ -16,6 +16,7 @@
   "dependencies": {
     "@capacitor/android": "^8.3.1",
     "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
     "@capacitor/cli": "^7.6.2",
     "@capacitor/core": "^8.3.1",
     "@capacitor/haptics": "^8.0.2",
@@ -120,8 +121,8 @@
     "@types/ws": "^8.5.13"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8",
-    "better-sqlite3": "^11.7.0"
+    "better-sqlite3": "^11.7.0",
+    "bufferutil": "^4.0.8"
   },
   "overrides": {
     "drizzle-kit": {

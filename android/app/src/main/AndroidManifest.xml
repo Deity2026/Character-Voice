@@ -22,6 +22,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep link for Stripe Checkout return:
+                 charactervoice://billing/success and charactervoice://billing/cancel -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="charactervoice" android:host="billing" />
+            </intent-filter>
+
         </activity>
 
         <provider
